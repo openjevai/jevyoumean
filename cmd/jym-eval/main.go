@@ -56,12 +56,20 @@ func run(path string, noCache bool) int {
 	}
 	cfg, _ := config.Load()
 	cfg.ApplyEnv()
-	apiKey, _ := creds.Resolve()
+	apiKey, _, provider := creds.Resolve()
 	var client *jev.Client
 	if apiKey != "" {
 		client = jev.NewClient(apiKey, cfg.Timeout())
-		client.Model = cfg.Model
-		client.Endpoint = os.Getenv("JYM_API_ENDPOINT")
+		endpoint := os.Getenv("JYM_API_ENDPOINT")
+		if endpoint != "" {
+			client.Endpoint = endpoint
+			client.Model = cfg.Model
+		} else if provider == creds.ProviderOpenJEV {
+			client.Endpoint = jev.OpenJEVEndpoint
+			client.Model = jev.OpenJEVModel
+		} else {
+			client.Model = cfg.Model
+		}
 	} else {
 		fmt.Fprintln(os.Stderr, "jym-eval: no API key; reporting edit-distance results only")
 	}

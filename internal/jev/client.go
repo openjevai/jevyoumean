@@ -19,8 +19,12 @@ import (
 const (
 	// DefaultEndpoint is the TypeSafe System One endpoint.
 	DefaultEndpoint = "https://api.typesafe.ai/v1/systemone"
-	// DefaultModel selects the current stable Jev model.
+	// DefaultModel selects the current stable Jev model on TypeSafe.
 	DefaultModel = "jev-latest"
+	// OpenJEVEndpoint is the OpenJEV community gateway to the same Jev model.
+	OpenJEVEndpoint = "https://api.openjev.sh/v1/systemone"
+	// OpenJEVModel is the model id on the OpenJEV gateway.
+	OpenJEVModel = "openjev"
 )
 
 // ErrUnauthorized marks a rejected API key (HTTP 401).
@@ -82,7 +86,7 @@ func MarshalRequest(model string, state any, questions map[string]Question) ([]b
 }
 
 // Ask sends state plus a set of questions in a single round trip and
-// returns the answers keyed by question id. HTTP 429 and 529 are
+// returns the answers keyed by question id. HTTP 429, 503 and 529 are
 // retried once after a short backoff; every other failure is returned
 // immediately — the user is waiting, so we do not press our luck.
 func (c *Client) Ask(ctx context.Context, state any, questions map[string]Question) (map[string]ChoiceAnswer, error) {
@@ -102,7 +106,7 @@ func (c *Client) Ask(ctx context.Context, state any, questions map[string]Questi
 			break
 		}
 		var httpErr *httpError
-		if !errors.As(err, &httpErr) || (httpErr.status != http.StatusTooManyRequests && httpErr.status != 529) {
+		if !errors.As(err, &httpErr) || (httpErr.status != http.StatusTooManyRequests && httpErr.status != 503 && httpErr.status != 529) {
 			break
 		}
 		select {

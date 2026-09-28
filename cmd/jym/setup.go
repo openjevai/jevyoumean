@@ -79,7 +79,7 @@ func promptKey(cfg *config.Config) string {
 		if key == "" {
 			return ""
 		}
-		err = newClient(cfg, key).ValidateKey(context.Background())
+		err = newClient(cfg, key, creds.ProviderTypeSafe).ValidateKey(context.Background())
 		switch {
 		case errors.Is(err, jev.ErrUnauthorized):
 			fmt.Fprintln(os.Stderr, "jym: key rejected (401); try again or press Enter to skip.")

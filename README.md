@@ -10,6 +10,12 @@ document, it reads the CLI's help output and asks
 [Jev](https://typesafe.ai) — TypeSafe's System One model — which
 documented subcommand you most likely meant.
 
+> **OpenJEV support:** Jev is built by [TypeSafe](https://typesafe.ai). This
+> fork keeps TypeSafe as the default and adds optional support for
+> [OpenJEV](https://openjev.sh), a free community gateway to the same Jev
+> model — set `OPENJEV_API_KEY` (or `JEV_PROVIDER=openjev`) to use it.
+> Original project: https://github.com/syumai/jevyoumean by @syumai.
+
 ![jym correcting npm and git subcommands](demo/readme.gif)
 
 ```console
@@ -159,8 +165,14 @@ re-asked; `jym --setup` re-runs it anytime.
 
 Key resolution order:
 
-1. `TYPESAFE_API_KEY` environment variable
-2. `$XDG_CONFIG_HOME/jym/credentials.toml` (mode `0600`)
+1. `JEV_PROVIDER=openjev` forces OpenJEV (uses `OPENJEV_API_KEY`)
+2. `TYPESAFE_API_KEY` environment variable
+3. `$XDG_CONFIG_HOME/jym/credentials.toml` (mode `0600`)
+4. `OPENJEV_API_KEY` environment variable (when no TypeSafe key is set)
+
+Get a TypeSafe key at https://console.typesafe.ai/ or an OpenJEV key at
+https://openjev.sh/dashboard. TypeSafe remains the default; anyone with a
+TypeSafe key sees zero behaviour change.
 
 ## Configuration
 
@@ -188,8 +200,9 @@ max_depth = 3
 ```
 
 Environment overrides: `JYM_MODE`, `JYM_DEBUG`, `JYM_COLOR` (`always` or
-`never`; TTY detection by default), and `JYM_API_ENDPOINT` (endpoint override,
-for tests). The standard `NO_COLOR` variable disables colored output.
+`never`; TTY detection by default), `JYM_API_ENDPOINT` (endpoint override,
+for tests), and `JEV_PROVIDER` (`openjev` to force the OpenJEV gateway).
+The standard `NO_COLOR` variable disables colored output.
 
 ## Cache
 

@@ -28,16 +28,37 @@ func Path() (string, error) {
 	return filepath.Join(dir, "credentials.toml"), nil
 }
 
-// Resolve returns the configured API key. The TYPESAFE_API_KEY
-// environment variable takes precedence over the credentials file.
-func Resolve() (key, source string) {
+// Provider identifies which Jev backend is in use.
+type Provider string
+
+const (
+	ProviderTypeSafe Provider = "typesafe"
+	ProviderOpenJEV  Provider = "openjev"
+)
+
+// Resolve returns the configured API key and the provider it belongs to.
+// The provider selection rule is:
+//  1. JEV_PROVIDER=openjev forces OpenJEV (uses OPENJEV_API_KEY).
+//  2. TYPESAFE_API_KEY (env or credentials file) → TypeSafe (unchanged default).
+//  3. OPENJEV_API_KEY only → OpenJEV.
+//
+// Anyone with a TypeSafe key sees zero behaviour change.
+func Resolve() (key, source string, provider Provider) {
+	if os.Getenv("JEV_PROVIDER") == "openjev" {
+		if k := os.Getenv("OPENJEV_API_KEY"); k != "" {
+			return k, "OPENJEV_API_KEY", ProviderOpenJEV
+		}
+	}
 	if k := os.Getenv("TYPESAFE_API_KEY"); k != "" {
-		return k, "TYPESAFE_API_KEY"
+		return k, "TYPESAFE_API_KEY", ProviderTypeSafe
 	}
 	if k, err := LoadFile(); err == nil && k != "" {
-		return k, "credentials file"
+		return k, "credentials file", ProviderTypeSafe
 	}
-	return "", ""
+	if k := os.Getenv("OPENJEV_API_KEY"); k != "" {
+		return k, "OPENJEV_API_KEY", ProviderOpenJEV
+	}
+	return "", "", ProviderTypeSafe
 }
 
 // LoadFile reads the API key from the credentials file.

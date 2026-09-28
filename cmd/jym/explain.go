@@ -3,11 +3,13 @@ package main
 import (
 	"context"
 	"fmt"
+	"os"
 	"sort"
 	"strings"
 	"time"
 
 	"github.com/syumai/jevyoumean/internal/config"
+	"github.com/syumai/jevyoumean/internal/creds"
 	"github.com/syumai/jevyoumean/internal/decide"
 	"github.com/syumai/jevyoumean/internal/fallback"
 	"github.com/syumai/jevyoumean/internal/jev"
@@ -16,7 +18,7 @@ import (
 // runExplain implements --explain: it runs the full detection pipeline,
 // shows the Jev request and response, and reports the decision without
 // executing anything.
-func runExplain(cfg *config.Config, apiKey, cmdName string, det detection) int {
+func runExplain(cfg *config.Config, apiKey, cmdName string, det detection, provider creds.Provider) int {
 	printExplain(det)
 
 	if apiKey == "" {
@@ -34,12 +36,16 @@ func runExplain(cfg *config.Config, apiKey, cmdName string, det detection) int {
 		Arguments:      jev.FilterArgs(det.trailing, cfg.ContextArgs),
 	}
 	questions := jev.BuildQuestions(det.candidates)
-	if reqBody, err := jev.MarshalRequest(cfg.Model, state, questions); err == nil {
+	model := cfg.Model
+	if os.Getenv("JYM_API_ENDPOINT") == "" && provider == creds.ProviderOpenJEV {
+		model = jev.OpenJEVModel
+	}
+	if reqBody, err := jev.MarshalRequest(model, state, questions); err == nil {
 		fmt.Printf("\nrequest:\n%s\n", reqBody)
 	}
 
 	start := time.Now()
-	ans, err := newClient(cfg, apiKey).Suggest(context.Background(), state, det.candidates)
+	ans, err := newClient(cfg, apiKey, provider).Suggest(context.Background(), state, det.candidates)
 	fmt.Printf("\nlatency: %dms\n", time.Since(start).Milliseconds())
 	if err != nil {
 		fmt.Printf("response error: %v\n", err)

@@ -31,12 +31,12 @@ func runDoctor() int {
 		cfg.Mode, cfg.SuggestThreshold, cfg.AutoRunThreshold, cfg.MinConfidence)
 	fmt.Printf("timeout:      %s\n", cfg.Timeout())
 
-	key, source := creds.Resolve()
+	key, source, provider := creds.Resolve()
 	if key == "" {
 		fmt.Println("api key:      not configured (run 'jym --setup')")
 	} else {
 		fmt.Printf("api key:      %s via %s\n", creds.Masked(key), source)
-		client := newClient(cfg, key)
+		client := newClient(cfg, key, provider)
 		start := time.Now()
 		err := client.ValidateKey(context.Background())
 		switch {

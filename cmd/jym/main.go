@@ -165,11 +165,14 @@ Flags:
 
 Environment:
   TYPESAFE_API_KEY  TypeSafe API key (overrides the credentials file)
+  OPENJEV_API_KEY   OpenJEV API key (used when JEV_PROVIDER=openjev, or when
+                   no TypeSafe key is configured). Get one at openjev.sh/dashboard
+  JEV_PROVIDER      Force a provider: "openjev" (default: TypeSafe)
   JYM_CONFIG        Alternate config file path
   JYM_MODE          Override mode (prompt, hint, auto)
   JYM_DEBUG         Enable debug output
   JYM_COLOR         Color output override (always, never; auto by default)
-  JYM_API_ENDPOINT  Override the TypeSafe API endpoint (testing)
+  JYM_API_ENDPOINT  Override the API endpoint (testing)
 `)
 }
 
@@ -228,7 +231,7 @@ func wrap(inv invocation) int {
 		logf("cache invalidated for %s", exe)
 	}
 
-	apiKey, keySource := creds.Resolve()
+	apiKey, keySource, provider := creds.Resolve()
 	if apiKey == "" && stdinTTY && !inv.explain {
 		if st, err := creds.LoadState(); err == nil && !st.SetupDeclined {
 			apiKey = firstRunSetup(cfg)
@@ -250,7 +253,7 @@ func wrap(inv invocation) int {
 	}
 
 	if inv.explain {
-		return runExplain(cfg, apiKey, inv.wrapped[0], det)
+		return runExplain(cfg, apiKey, inv.wrapped[0], det, provider)
 	}
 
 	// A suggestion path: Jev when a key exists, edit distance otherwise.
@@ -261,7 +264,7 @@ func wrap(inv invocation) int {
 		jevOK   bool
 	)
 	if apiKey != "" {
-		client := newClient(cfg, apiKey)
+		client := newClient(cfg, apiKey, provider)
 		state := jev.State{
 			Command:        inv.wrapped[0],
 			SubcommandPath: det.path,
@@ -475,10 +478,18 @@ func denylist(cfg *config.Config) map[string]bool {
 	return set
 }
 
-func newClient(cfg *config.Config, apiKey string) *jev.Client {
+func newClient(cfg *config.Config, apiKey string, provider creds.Provider) *jev.Client {
 	c := jev.NewClient(apiKey, cfg.Timeout())
-	c.Model = cfg.Model
-	c.Endpoint = os.Getenv("JYM_API_ENDPOINT") // empty means default
+	endpoint := os.Getenv("JYM_API_ENDPOINT") // empty means default
+	if endpoint != "" {
+		c.Endpoint = endpoint
+		c.Model = cfg.Model
+	} else if provider == creds.ProviderOpenJEV {
+		c.Endpoint = jev.OpenJEVEndpoint
+		c.Model = jev.OpenJEVModel
+	} else {
+		c.Model = cfg.Model
+	}
 	return c
 }
 
